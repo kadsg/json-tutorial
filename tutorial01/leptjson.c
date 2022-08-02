@@ -24,9 +24,52 @@ static int lept_parse_null(lept_context* c, lept_value* v) {
     return LEPT_PARSE_OK;
 }
 
+static int lept_parse_true(lept_context* c, lept_value* v) {
+    EXPECT(c, 't');
+    if (c->json[0] != 'r' || c->json[1] != 'u' || c->json[2] != 'e')
+        return LEPT_PARSE_INVALID_VALUE;
+    c->json += 3;
+    v->type = LEPT_NULL;
+    return LEPT_PARSE_OK;
+}
+
+static int lept_parse_false(lept_context* c, lept_value* v) {
+    EXPECT(c, 'f');
+    if (c->json[0] != 'a' || c->json[1] != 'l' || c->json[2] != 's' || c->json[3] != 'e')
+        return LEPT_PARSE_INVALID_VALUE;
+    c->json += 3;
+    v->type = LEPT_NULL;
+    return LEPT_PARSE_OK;
+}
+
 static int lept_parse_value(lept_context* c, lept_value* v) {
+
+    /* 先判断值是否唯一 */
+    lept_context t;
+    char* ptr, * p;
+    p = (char*)malloc(sizeof(char) * strlen(c->json) + 1);
+    // 赋值
+    ptr = p;
+    if (p) {
+        strcpy(p, c->json);
+        // 处理非空字符，第一次遇到空字符时结束
+        while (*p != ' ' && *p != '\t' && *p != '\n' && *p != '\r' && *p != '\0')
+            ++p;
+        t.json = p;
+        // 处理后续空字符
+        lept_parse_whitespace(&t);
+        // 读取空字符后json指针不指向字符串的结束位，说明后续还有非空字符，值不唯一
+        if (t.json[0] != '\0') {
+            free(ptr);
+            return LEPT_PARSE_ROOT_NOT_SINGULAR;
+        }
+    }
+
+
     switch (*c->json) {
         case 'n':  return lept_parse_null(c, v);
+        case 't':  return lept_parse_true(c, v);
+        case 'f':  return lept_parse_false(c, v);
         case '\0': return LEPT_PARSE_EXPECT_VALUE;
         default:   return LEPT_PARSE_INVALID_VALUE;
     }
